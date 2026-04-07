@@ -1,0 +1,44 @@
+{
+  "name": "four-meme-monitor",
+  "version": "1.0.0",
+  "description": "Four.meme smart wallet monitoring system with scoring algorithm",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx src/scorers/ScoringEngine.test.ts",
+    "data:mock": "tsx scripts/fetchAndMockData.ts mock",
+    "data:fetch": "tsx scripts/fetchAndMockData.ts fetch",
+    "data:export": "tsx scripts/fetchAndMockData.ts export",
+    "data:stats": "tsx scripts/fetchAndMockData.ts stats",
+    "validate": "tsx scripts/validateScoring.ts"
+  },
+  "keywords": [
+    "four.meme",
+    "bsc",
+    "wallet",
+    "monitor",
+    "trading-bot"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.5.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/node-telegram-bot-api": "^0.64.14",
+    "axios": "^1.13.6",
+    "better-sqlite3": "^12.8.0",
+    "dotenv": "^17.3.1",
+    "ethers": "^6.16.0",
+    "node-cron": "^4.2.1",
+    "node-telegram-bot-api": "^0.67.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0"
+  }
+}

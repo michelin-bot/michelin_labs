@@ -1,0 +1,66 @@
+[
+  {
+    "address": "0x1234567890abcdef1234567890abcdef12345678",
+    "name": "聪明钱A",
+    "winRate": 0.85,
+    "totalTrades": 120,
+    "avgProfit": 3.5,
+    "isActive": true
+  },
+  {
+    "address": "0xabcdef1234567890abcdef1234567890abcdef12",
+    "name": "聪明钱B",
+    "winRate": 0.72,
+    "totalTrades": 85,
+    "avgProfit": 2.1,
+    "isActive": true
+  },
+  {
+    "address": "0x9876543210fedcba9876543210fedcba98765432",
+    "name": "聪明钱C",
+    "winRate": 0.91,
+    "totalTrades": 45,
+    "avgProfit": 5.8,
+    "isActive": true
+  },
+  {
+    "address": "0xfedcba9876543210fedcba9876543210fedcba98",
+    "name": "聪明钱D",
+    "winRate": 0.65,
+    "totalTrades": 200,
+    "avgProfit": 1.8,
+    "isActive": false
+  },
+  {
+    "address": "0x1111222233334444555566667777888899990000",
+    "name": "聪明钱E",
+    "winRate": 0.78,
+    "totalTrades": 92,
+    "avgProfit": 2.9,
+    "isActive": true
+  },
+  {
+    "address": "0xaaaabbbbccccddddeeeeffff0000111122223333",
+    "name": "狙击手A",
+    "winRate": 0.88,
+    "totalTrades": 310,
+    "avgProfit": 4.2,
+    "isActive": true
+  },
+  {
+    "address": "0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+    "name": "打包机A",
+    "winRate": 0.55,
+    "totalTrades": 500,
+    "avgProfit": 0.8,
+    "isActive": true
+  },
+  {
+    "address": "0x9999888877776666555544443333222211110000",
+    "name": "CTO社区",
+    "winRate": 0.70,
+    "totalTrades": 35,
+    "avgProfit": 6.5,
+    "isActive": true
+  }
+]
