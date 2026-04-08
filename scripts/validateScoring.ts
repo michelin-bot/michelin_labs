@@ -92,7 +92,7 @@ async function main() {
       },
       discoveryMethod: Math.random() > 0.3 ? 'signal' : 'scan',
       narrative: {
-        type: ['技术/AI', '热点事件', '社交病毒', '反讽文化'][Math.floor(Math.random() * 4)],
+        type: ['tech/ai', 'viral event', 'social virus', 'ironic culture'][Math.floor(Math.random() * 4)],
         strength: (Math.floor(Math.random() * 5) + 1) as 1 | 2 | 3 | 4 | 5,
         isCTO: Math.random() > 0.9,
       },

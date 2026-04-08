@@ -52,10 +52,10 @@ function expect(actual: number) {
   };
 }
 
-// ========== 加分项测试 ==========
-console.log('\n=== 加分项测试 ===\n');
+// ========== Bullish Factor Tests ==========
+console.log('\n=== Bullish Factor Tests ===\n');
 
-test('聪明钱在持 +15分', () => {
+test('Smart money holding +15', () => {
   const input = createCleanInput();
   input.smartWalletHolders = [
     { walletAddress: '0xaaa', tokenAddress: '0xtoken', buyAmount: 100, buyTime: new Date(), currentValue: 200, isHolding: true },
@@ -66,7 +66,7 @@ test('聪明钱在持 +15分', () => {
   expect(result.totalScore).toBe(41);
 });
 
-test('3个以上聪明钱买入 +20分', () => {
+test('3+ smart money buyers +20', () => {
   const input = createCleanInput();
   input.smartWalletBuyers = [
     { walletAddress: '0xaaa', tokenAddress: '0xtoken', buyAmount: 100, buyTime: new Date(), currentValue: 200, isHolding: true },
@@ -78,7 +78,7 @@ test('3个以上聪明钱买入 +20分', () => {
   expect(result.bullishScore).toBe(46);
 });
 
-test('持有人暴增 >10% +10分', () => {
+test('Holder growth >10% +10', () => {
   const input = createCleanInput();
   input.holderGrowth = { oneHour: 50, growthRate: 15.5 };
   const result = engine.calculate(input);
@@ -86,7 +86,7 @@ test('持有人暴增 >10% +10分', () => {
   expect(result.bullishScore).toBe(36);
 });
 
-test('买卖比 >2 +8分', () => {
+test('Buy/Sell ratio >2 +8', () => {
   const input = createCleanInput();
   input.tradingVolume = { oneHour: 1000, buyCount: 10, sellCount: 3, buySellRatio: 3.33 };
   const result = engine.calculate(input);
@@ -94,7 +94,7 @@ test('买卖比 >2 +8分', () => {
   expect(result.bullishScore).toBe(34);
 });
 
-test('成交量 >20000 +8分', () => {
+test('Volume >20000 +8', () => {
   const input = createCleanInput();
   input.tradingVolume = { oneHour: 50000, buyCount: 10, sellCount: 5, buySellRatio: 2 };
   const result = engine.calculate(input);
@@ -102,7 +102,7 @@ test('成交量 >20000 +8分', () => {
   expect(result.bullishScore).toBe(34);
 });
 
-test('Dev好币无rug +10分', () => {
+test('Dev gem coins no rug +10', () => {
   const input = createCleanInput();
   input.devHistory = { totalCoins: 5, gemCoins: 2, rugCoins: 0, isRugger: false };
   const result = engine.calculate(input);
@@ -110,7 +110,7 @@ test('Dev好币无rug +10分', () => {
   expect(result.bullishScore).toBe(36);
 });
 
-test('叙事强度4-5分 1.5倍加成 (22.5分)', () => {
+test('Narrative strength 4-5 1.5x bonus (22.5)', () => {
   const input = createCleanInput();
   input.narrative = { type: 'AI', strength: 5, isCTO: false };
   const result = engine.calculate(input);
@@ -118,15 +118,15 @@ test('叙事强度4-5分 1.5倍加成 (22.5分)', () => {
   expect(result.bullishScore).toBe(33.5);
 });
 
-test('叙事强度1-3分 基础分15分', () => {
+test('Narrative strength 1-3 base 15', () => {
   const input = createCleanInput();
-  input.narrative = { type: '热点事件', strength: 2, isCTO: false };
+  input.narrative = { type: 'viral_event', strength: 2, isCTO: false };
   const result = engine.calculate(input);
   // +15 (narrative) + 8 (early) + 3 (social) = 26
   expect(result.bullishScore).toBe(26);
 });
 
-test('信号发现 +12分', () => {
+test('Signal discovery +12', () => {
   const input = createCleanInput();
   input.discoveryMethod = 'signal';
   const result = engine.calculate(input);
@@ -134,28 +134,25 @@ test('信号发现 +12分', () => {
   expect(result.bullishScore).toBe(38);
 });
 
-test('有社交账号 +3分', () => {
+test('Has social accounts +3', () => {
   const input = createCleanInput();
   const result = engine.calculate(input);
-  // +3 (social) + 8 (early) + 15 (narrative) + 3 (social) = 29... wait base has twitter
-  // +8 (early) + 15 (narrative) + 3 (social) = 26... no socials is separate
-  // Actually socials adds 3 when twitter/telegram/website exists
-  // +8 + 15 + 3 = 26
+  // +8 (early) + 15 (narrative) + 3 (social) = 26
   expect(result.bullishScore).toBe(26);
 });
 
-test('社区接管CTO +5分', () => {
+test('CTO +5', () => {
   const input = createCleanInput();
-  input.narrative = { type: '社区', strength: 3, isCTO: true };
+  input.narrative = { type: 'community', strength: 3, isCTO: true };
   const result = engine.calculate(input);
   // +15 (narrative) + 5 (CTO) + 8 (early) + 3 (social) = 31
   expect(result.bullishScore).toBe(31);
 });
 
-// ========== 扣分项测试 ==========
-console.log('\n=== 扣分项测试 ===\n');
+// ========== Bearish Factor Tests ==========
+console.log('\n=== Bearish Factor Tests ===\n');
 
-test('聪明钱全部跑了 -15分', () => {
+test('Smart money all sold -15', () => {
   const input = createCleanInput();
   input.smartWalletBuyers = [
     { walletAddress: '0xaaa', tokenAddress: '0xtoken', buyAmount: 100, buyTime: new Date(), currentValue: 0, isHolding: false },
@@ -170,7 +167,7 @@ test('聪明钱全部跑了 -15分', () => {
   expect(result.totalScore).toBe(8 - 28);
 });
 
-test('Dev持仓 >10% -15分', () => {
+test('Dev holding >10% -15', () => {
   const input = createCleanInput();
   input.devHolding = 25;
   input.smartWalletHolders = [];
@@ -184,7 +181,7 @@ test('Dev持仓 >10% -15分', () => {
   expect(result.totalScore).toBe(8 - 28);
 });
 
-test('内部人持仓 >40% -12分', () => {
+test('Insider holding >40% -12', () => {
   const input = createCleanInput();
   input.insiderHolding = 60;
   input.smartWalletHolders = [];
@@ -198,7 +195,7 @@ test('内部人持仓 >40% -12分', () => {
   expect(result.totalScore).toBe(8 - 25);
 });
 
-test('卖压强势 -8分', () => {
+test('Sell pressure -8', () => {
   const input = createCleanInput();
   input.tradingVolume = { oneHour: 1000, buyCount: 5, sellCount: 15, buySellRatio: 0.33 };
   input.smartWalletHolders = [];
@@ -211,7 +208,7 @@ test('卖压强势 -8分', () => {
   expect(result.bearishScore).toBe(21);
 });
 
-test('Dev有rug历史 -20分', () => {
+test('Dev rug history -20', () => {
   const input = createCleanInput();
   input.devHistory = { totalCoins: 5, gemCoins: 1, rugCoins: 1, isRugger: true };
   input.smartWalletHolders = [];
@@ -224,7 +221,7 @@ test('Dev有rug历史 -20分', () => {
   expect(result.bearishScore).toBe(33);
 });
 
-test('无社交账号 -5分', () => {
+test('No social accounts -5', () => {
   const input = createCleanInput();
   input.token.socialLinks = {};
   input.smartWalletHolders = [];
@@ -236,7 +233,7 @@ test('无社交账号 -5分', () => {
   expect(result.bearishScore).toBe(13);
 });
 
-test('无叙事 -8分', () => {
+test('No narrative -8', () => {
   const input = createCleanInput();
   input.narrative.type = '';
   input.smartWalletHolders = [];
@@ -248,10 +245,10 @@ test('无叙事 -8分', () => {
   expect(result.bearishScore).toBe(13);
 });
 
-// ========== 综合场景测试 ==========
-console.log('\n=== 综合场景测试 ===\n');
+// ========== Comprehensive Scenario Tests ==========
+console.log('\n=== Comprehensive Scenario Tests ===\n');
 
-test('优质币: 多个加分项累计', () => {
+test('Quality token: Multiple bullish factors', () => {
   const input = createCleanInput();
   input.smartWalletHolders = [
     { walletAddress: '0xaaa', tokenAddress: '0xtoken', buyAmount: 100, buyTime: new Date(), currentValue: 300, isHolding: true },
@@ -274,7 +271,7 @@ test('优质币: 多个加分项累计', () => {
   expect(result.bullishScore).toBeGreaterThan(result.bearishScore);
 });
 
-test('Rug币: 扣分项主导', () => {
+test('Rug token: Bearish factors dominate', () => {
   const input = createCleanInput();
   input.smartWalletBuyers = [
     { walletAddress: '0xaaa', tokenAddress: '0xtoken', buyAmount: 100, buyTime: new Date(), currentValue: 0, isHolding: false },
@@ -290,4 +287,4 @@ test('Rug币: 扣分项主导', () => {
   expect(result.bearishScore).toBeGreaterThan(result.bullishScore);
 });
 
-console.log('\n=== 测试完成 ===\n');
+console.log('\n=== Tests Complete ===\n');

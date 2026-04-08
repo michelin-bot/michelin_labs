@@ -253,30 +253,30 @@ async function sendTokenAlert(
     : '0';
 
   const message = `
-${emoji} <b>高分代币警报</b>
+${emoji} <b>High Score Alert</b>
 
 🏷️ <b>${token.symbol}</b>
 📛 ${token.name}
 📍 <code>${token.address}</code>
 
-📊 <b>评分: ${score.totalScore}</b> 分
-   拉盘证据: +${score.bullishScore}
-   砸盘证据: -${score.bearishScore}
+📊 <b>Score: ${score.totalScore}</b>
+   Bullish: +${score.bullishScore}
+   Bearish: -${score.bearishScore}
 
-📈 <b>交易数据:</b>
-• 买入: ${summary.totalBuys} | 卖出: ${summary.totalSells}
-• 成交量: ${summary.totalVolume.toFixed(4)} BNB
-• 手续费率: ${feeRate}%
-• 交易者: ${summary.uniqueTraders} 人
+📈 <b>Trading Data:</b>
+• Buys: ${summary.totalBuys} | Sells: ${summary.totalSells}
+• Volume: ${summary.totalVolume.toFixed(4)} BNB
+• Fee Rate: ${feeRate}%
+• Traders: ${summary.uniqueTraders}
 
-${score.details.bullish.length > 0 ? '🟢 <b>加分项:</b>\n' + score.details.bullish.map(b => `   • ${b.reason}`).join('\n') : ''}
+${score.details.bullish.length > 0 ? '🟢 <b>Bullish Factors:</b>\n' + score.details.bullish.map(b => `   • ${b.reason}`).join('\n') : ''}
 
 🔗 <a href="https://dexscreener.com/bsc/${token.address}">DexScreener</a>
 `;
 
   await alertManager.send({
     type: 'score_change',
-    title: `${token.symbol} 评分 ${score.totalScore}分`,
+    title: `${token.symbol} Score ${score.totalScore}`,
     content: message,
     timestamp: Date.now(),
     data: { tokenAddress: token.address, score },
@@ -307,30 +307,30 @@ async function sendPeriodicSummary(
   const positiveCount = scoredTokens.filter(t => t.score.totalScore > 0).length;
 
   const message = `
-📊 <b>Four.meme 实时监控报告</b>
+📊 <b>Four.meme Real-time Monitor Report</b>
 
-🕐 ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
+🕐 ${new Date().toLocaleString()}
 
-📈 <b>整体数据:</b>
-• 活跃代币: ${scoredTokens.length}
-• 总交易: ${totalBuys + totalSells} (买 ${totalBuys} / 卖 ${totalSells})
-• 总成交量: ${totalVolume.toFixed(4)} BNB
-• 总手续费: ${totalFees.toFixed(6)} BNB
+📈 <b>Overview:</b>
+• Active Tokens: ${scoredTokens.length}
+• Total Trades: ${totalBuys + totalSells} (Buy ${totalBuys} / Sell ${totalSells})
+• Total Volume: ${totalVolume.toFixed(4)} BNB
+• Total Fees: ${totalFees.toFixed(6)} BNB
 
-📊 <b>评分统计:</b>
-• 平均评分: ${avgScore.toFixed(1)} 分
-• 正分代币: ${positiveCount} (${((positiveCount / scoredTokens.length) * 100).toFixed(1)}%)
+📊 <b>Score Stats:</b>
+• Avg Score: ${avgScore.toFixed(1)}
+• Positive: ${positiveCount} (${((positiveCount / scoredTokens.length) * 100).toFixed(1)}%)
 
-🏆 <b>Top ${scoredTokens.length} 代币:</b>
+🏆 <b>Top ${scoredTokens.length} Tokens:</b>
 ${scoredTokens.slice(0, scoredTokens.length).map((t, i) => {
   const emoji = t.score.totalScore >= 50 ? '🟢' : t.score.totalScore >= 20 ? '🟡' : '🔴';
-  return `${emoji} ${i + 1}. ${t.token.symbol} - 评分: ${t.score.totalScore} | 成交: ${t.summary.totalVolume.toFixed(4)} BNB`;
+  return `${emoji} ${i + 1}. ${t.token.symbol} - Score: ${t.score.totalScore} | Vol: ${t.summary.totalVolume.toFixed(4)} BNB`;
 }).join('\n')}
 `;
 
   await alertManager.send({
     type: 'token_alert',
-    title: `Four.meme 实时监控报告`,
+    title: `Four.meme Real-time Monitor Report`,
     content: message,
     timestamp: Date.now(),
   });
@@ -345,25 +345,25 @@ async function sendDailySummary(state: MonitorState): Promise<void> {
     const recentTokens = db.getRecentTokens(1000);
 
     const message = `
-📊 <b>Four.meme 每日报告</b>
+📊 <b>Four.meme Daily Report</b>
 
-🕐 ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
+🕐 ${new Date().toLocaleString()}
 
-📈 <b>系统状态:</b>
-• 运行时间: ${formatUptime(Date.now() - state.startTime)}
-• 数据库代币: ${stats.tokenCount}
-• 监控交易数: ${stats.activityCount}
+📈 <b>System Status:</b>
+• Uptime: ${formatUptime(Date.now() - state.startTime)}
+• DB Tokens: ${stats.tokenCount}
+• Monitored Trades: ${stats.activityCount}
 
-📈 <b>最近新增:</b>
-• 新代币: ${recentTokens.length} 个
-• 新交易: ${stats.activityCount}
+📈 <b>Recent Updates:</b>
+• New Tokens: ${recentTokens.length}
+• New Trades: ${stats.activityCount}
 
 🔗 <a href="https://dexscreener.com/bsc">DexScreener</a>
 `;
 
     await alertManager.send({
       type: 'token_alert',
-      title: 'Four.meme 每日报告',
+      title: 'Four.meme Daily Report',
       content: message,
       timestamp: Date.now(),
     });
@@ -375,7 +375,7 @@ async function sendDailySummary(state: MonitorState): Promise<void> {
 function formatUptime(ms: number): string {
   const hours = Math.floor(ms / (1000 * 60 * 60));
   const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-  return `${hours}小时${minutes}分钟`;
+  return `${hours}h ${minutes}m`;
 }
 
 main().catch(console.error);

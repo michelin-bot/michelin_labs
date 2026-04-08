@@ -202,33 +202,33 @@ async function sendTestResultsToTG(
     const positiveCount = results.filter(r => r.score.totalScore > 0).length;
 
     const summaryMsg = `
-📊 <b>Four.meme 链上数据测试报告</b>
+📊 <b>Four.meme On-chain Data Test Report</b>
 
-📅 统计周期: 最近 ${hours} 小时 (RPC限制)
+📅 Period: Last ${hours} hours (RPC limited)
 
-📈 <b>整体数据:</b>
-• 有交易的代币: ${results.length}
-• 总交易次数: ${totalBuys + totalSells}
-  - 买入: ${totalBuys}
-  - 卖出: ${totalSells}
-• 总成交量: ${totalVolume.toFixed(4)} BNB
-• 总手续费: ${totalFees.toFixed(6)} BNB
+📈 <b>Overview:</b>
+• Tokens with trades: ${results.length}
+• Total trades: ${totalBuys + totalSells}
+  - Buys: ${totalBuys}
+  - Sells: ${totalSells}
+• Total volume: ${totalVolume.toFixed(4)} BNB
+• Total fees: ${totalFees.toFixed(6)} BNB
 
-📊 <b>评分统计:</b>
-• 平均评分: ${avgScore.toFixed(1)} 分
-• 正分代币: ${positiveCount} (${results.length > 0 ? ((positiveCount / results.length) * 100).toFixed(1) : 0}%)
-• 负分代币: ${results.length - positiveCount}
+📊 <b>Score Stats:</b>
+• Avg score: ${avgScore.toFixed(1)}
+• Positive: ${positiveCount} (${results.length > 0 ? ((positiveCount / results.length) * 100).toFixed(1) : 0}%)
+• Negative: ${results.length - positiveCount}
 
-🏆 <b>Top 5 代币:</b>
+🏆 <b>Top 5 Tokens:</b>
 ${results.slice(0, 5).map((r, i) => {
   const emoji = r.score.totalScore >= 50 ? '🟢' : r.score.totalScore >= 20 ? '🟡' : '🔴';
-  return `${emoji} ${i + 1}. ${r.token.symbol} - 评分: ${r.score.totalScore} | 成交量: ${r.tradingSummary.totalVolume.toFixed(4)} BNB`;
+  return `${emoji} ${i + 1}. ${r.token.symbol} - Score: ${r.score.totalScore} | Vol: ${r.tradingSummary.totalVolume.toFixed(4)} BNB`;
 }).join('\n')}
 `;
 
     await alertManager.send({
       type: 'token_alert',
-      title: `Four.meme ${hours}小时数据测试报告`,
+      title: `Four.meme ${hours}h Data Test Report`,
       content: summaryMsg,
       timestamp: Date.now(),
     });
@@ -243,30 +243,30 @@ ${results.slice(0, 5).map((r, i) => {
       const detailMsg = `
 🏆 <b>Top ${i + 1}: ${r.token.symbol}</b>
 
-📛 名称: ${r.token.name}
-📍 地址: <code>${r.token.address}</code>
-👤 创建者: <code>${r.token.devAddress}</code>
+📛 Name: ${r.token.name}
+📍 Address: <code>${r.token.address}</code>
+👤 Creator: <code>${r.token.devAddress}</code>
 
-📊 <b>评分: ${r.score.totalScore}</b> 分
-   拉盘证据: +${r.score.bullishScore}
-   砸盘证据: -${r.score.bearishScore}
+📊 <b>Score: ${r.score.totalScore}</b>
+   Bullish: +${r.score.bullishScore}
+   Bearish: -${r.score.bearishScore}
 
-📈 <b>交易数据:</b>
-• 买入: ${r.tradingSummary.totalBuys}
-• 卖出: ${r.tradingSummary.totalSells}
-• 成交量: ${r.tradingSummary.totalVolume.toFixed(6)} BNB
-• 手续费: ${r.tradingSummary.totalFees.toFixed(6)} BNB (费率: ${feeRate}%)
-• 交易者: ${r.tradingSummary.uniqueTraders} 人
+📈 <b>Trading Data:</b>
+• Buys: ${r.tradingSummary.totalBuys}
+• Sells: ${r.tradingSummary.totalSells}
+• Volume: ${r.tradingSummary.totalVolume.toFixed(6)} BNB
+• Fees: ${r.tradingSummary.totalFees.toFixed(6)} BNB (Rate: ${feeRate}%)
+• Traders: ${r.tradingSummary.uniqueTraders}
 
-${r.score.details.bullish.length > 0 ? '🟢 <b>加分项:</b>\n' + r.score.details.bullish.map(b => `   • ${b.reason}`).join('\n') : ''}
-${r.score.details.bearish.length > 0 ? '🔴 <b>扣分项:</b>\n' + r.score.details.bearish.map(b => `   • ${b.reason}`).join('\n') : ''}
+${r.score.details.bullish.length > 0 ? '🟢 <b>Bullish Factors:</b>\n' + r.score.details.bullish.map(b => `   • ${b.reason}`).join('\n') : ''}
+${r.score.details.bearish.length > 0 ? '🔴 <b>Bearish Factors:</b>\n' + r.score.details.bearish.map(b => `   • ${b.reason}`).join('\n') : ''}
 
 🔗 <a href="https://dexscreener.com/bsc/${r.token.address}">DexScreener</a>
 `;
 
       await alertManager.send({
         type: 'score_change',
-        title: `${r.token.symbol} 评分 ${r.score.totalScore}分`,
+        title: `${r.token.symbol} Score ${r.score.totalScore}`,
         content: detailMsg,
         timestamp: Date.now(),
         data: { tokenAddress: r.token.address, score: r.score },

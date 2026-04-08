@@ -1,5 +1,5 @@
 export interface NarrativeInfo {
-  type: string; // 技术/AI、大佬喊单、热点事件、社交病毒、反讽文化
+  type: string; // tech/ai, kol_shill, viral_event, social_virus, ironic_culture
   strength: 1 | 2 | 3 | 4 | 5;
   isCTO: boolean;
   keywords: string[];
@@ -50,11 +50,11 @@ export class NarrativeScanner {
    */
   classifyNarrativeType(keywords: string[]): string {
     const narrativePatterns: Record<string, string[]> = {
-      '技术/AI': ['ai', 'artificial intelligence', 'gpt', 'llm', 'neural', 'machine learning', 'bot'],
-      '大佬喊单': ['kOL', 'whale', 'investor', 'tycoon', 'billionaire', 'just in', 'loading', 'pamp'],
-      '热点事件': ['news', 'event', 'announcement', 'partnership', 'listing', 'launch'],
-      '社交病毒': ['viral', 'meme', 'trend', 'fomo', 'going viral', 'everyone is talking'],
-      '反讽文化': ['ironic', 'satire', 'parody', 'shitcoin', 'degod', 'based'],
+      'tech/ai': ['ai', 'artificial intelligence', 'gpt', 'llm', 'neural', 'machine learning', 'bot'],
+      'kol_shill': ['kOL', 'whale', 'investor', 'tycoon', 'billionaire', 'just in', 'loading', 'pamp'],
+      'viral_event': ['news', 'event', 'announcement', 'partnership', 'listing', 'launch'],
+      'social_virus': ['viral', 'meme', 'trend', 'fomo', 'going viral', 'everyone is talking'],
+      'ironic_culture': ['ironic', 'satire', 'parody', 'shitcoin', 'degod', 'based'],
     };
 
     const lowerKeywords = keywords.map(k => k.toLowerCase());
@@ -66,7 +66,7 @@ export class NarrativeScanner {
       }
     }
 
-    return '未知';
+    return 'unknown';
   }
 
   /**
@@ -76,7 +76,7 @@ export class NarrativeScanner {
     return {
       type,
       strength,
-      isCTO: type === '社区接管',
+      isCTO: type === 'cto',
       keywords: [],
       description: `Mock narrative: ${type}`,
     };

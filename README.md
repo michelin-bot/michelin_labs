@@ -43,7 +43,7 @@ npx ts-node scripts/fetchAndMockData.ts
 
 ## Scoring System
 
-### Bullish Factors (加分项)
+### Bullish Factors
 - Smart money holding (1+ wallets)
 - Smart money accumulation (3+ buyers)
 - Holder growth > 10%
@@ -55,7 +55,7 @@ npx ts-node scripts/fetchAndMockData.ts
 - Social links
 - CTO (Community Takeover)
 
-### Bearish Factors (扣分项)
+### Bearish Factors
 - Smart money sold
 - Dev holding > 10%
 - Insider holding > 40%

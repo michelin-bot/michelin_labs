@@ -51,14 +51,14 @@ export class AlertManager {
   ): Promise<boolean> {
     const emoji = score >= 50 ? '🟢' : score >= 20 ? '🟡' : '🔴';
     const message = `
-${emoji} <b>代币评分更新</b>
+${emoji} <b>Token Score Update</b>
 
 🏷️ <b>${tokenSymbol}</b>
 📍 ${formatAddress(tokenAddress)}
 
-📊 评分: <b>${score}</b> 分
-   • 拉盘证据: +${bullishScore}
-   • 砸盘证据: -${bearishScore}
+📊 Score: <b>${score}</b>
+   • Bullish: +${bullishScore}
+   • Bearish: -${bearishScore}
 
 📝 ${summary}
 
@@ -67,7 +67,7 @@ ${emoji} <b>代币评分更新</b>
 
     const alert: AlertMessage = {
       type: 'score_change',
-      title: `${tokenSymbol} 评分 ${score}分`,
+      title: `${tokenSymbol} Score ${score}`,
       content: summary,
       timestamp: Date.now(),
       data: { tokenAddress, score, bullishScore, bearishScore },
@@ -84,18 +84,18 @@ ${emoji} <b>代币评分更新</b>
     amount: string,
     valueInBnb: string
   ): Promise<boolean> {
-    const emoji = action === 'buy' ? '🟢买入' : action === 'sell' ? '🔴卖出' : '📤转账';
+    const emoji = action === 'buy' ? '🟢 BUY' : action === 'sell' ? '🔴 SELL' : '📤 TRANSFER';
 
     const message = `
-${emoji} <b>聪明钱活动</b>
+${emoji} <b>Smart Money Activity</b>
 
 👛 <b>${walletName}</b>
 📍 ${formatAddress(walletAddress)}
 
-${action === 'buy' ? '🟢' : '🔴'} 操作: <b>${action.toUpperCase()}</b>
-💰 代币: ${tokenSymbol}
-💎 数量: ${amount}
-💵 价值: ${valueInBnb} BNB
+${action === 'buy' ? '🟢' : '🔴'} Action: <b>${action.toUpperCase()}</b>
+💰 Token: ${tokenSymbol}
+💎 Amount: ${amount}
+💵 Value: ${valueInBnb} BNB
 `;
 
     const alert: AlertMessage = {
@@ -116,7 +116,7 @@ ${action === 'buy' ? '🟢' : '🔴'} 操作: <b>${action.toUpperCase()}</b>
     details: string
   ): Promise<boolean> {
     const emoji = alertType === 'new_token' ? '🆕' : alertType === 'high_score' ? '🚨' : '🐋';
-    const title = alertType === 'new_token' ? '新币发现' : alertType === 'high_score' ? '高分警报' : '鲸鱼砸盘';
+    const title = alertType === 'new_token' ? 'New Token' : alertType === 'high_score' ? 'High Score Alert' : 'Whale Dump';
 
     const message = `
 ${emoji} <b>${title}</b>
@@ -141,7 +141,7 @@ ${emoji} <b>${title}</b>
   }
 
   private formatMessage(alert: AlertMessage): string {
-    const time = new Date(alert.timestamp).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+    const time = new Date(alert.timestamp).toLocaleString();
 
     let message = `
 📨 <b>${alert.title}</b>
