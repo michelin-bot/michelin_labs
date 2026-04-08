@@ -14,6 +14,19 @@ export const config = {
     .split(',')
     .map(w => w.trim())
     .filter(w => w.length > 0),
+  // Real-time monitoring settings
+  realtime: {
+    enabled: process.env.REALTIME_MODE_ENABLED !== 'false', // Default: true
+    scanIntervalSeconds: parseInt(process.env.REALTIME_SCAN_INTERVAL || '5', 10),
+    alertThreshold: parseInt(process.env.REALTIME_ALERT_THRESHOLD || '10', 10),
+    blocksPerScan: parseInt(process.env.REALTIME_BLOCKS_PER_SCAN || '100', 10),
+    maxTokensPerScan: parseInt(process.env.REALTIME_MAX_TOKENS_PER_SCAN || '20', 10),
+  },
+  // Summary report settings
+  summary: {
+    enabled: process.env.SUMMARY_REPORT_ENABLED !== 'false', // Default: true
+    intervalMinutes: parseInt(process.env.SUMMARY_REPORT_INTERVAL || '30', 10),
+  },
 };
 
 export function validateConfig(): boolean {

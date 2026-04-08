@@ -5,7 +5,6 @@ import { TokenScanner } from './scanners/TokenScanner';
 import { AlertManager } from './alerts/AlertManager';
 import { ScoringEngine, ScoreResult } from './scorers/ScoringEngine';
 import { Token, TokenTrade, WalletPosition, TokenScoreInput } from './types';
-import nodeCron from 'node-cron';
 
 interface MonitorState {
   db: SqliteDatabase;
@@ -16,12 +15,20 @@ interface MonitorState {
   lastProcessedBlock: number;
   knownTokens: Set<string>;
   startTime: number;
+  // For summary report tracking
+  summaryTokens: Map<string, {
+    token: Token;
+    score: ScoreResult;
+    summary: {
+      totalBuys: number;
+      totalSells: number;
+      totalVolume: number;
+      totalFees: number;
+      uniqueTraders: number;
+    };
+  }>;
+  lastSummaryTime: number;
 }
-
-const SCAN_INTERVAL_SECONDS = 5;  // Scan every 5 seconds
-const BLOCKS_PER_SCAN = 100;       // Only scan ~100 blocks at a time (~5 min on BSC)
-const NEW_TOKEN_ALERT_THRESHOLD = 10; // Alert if score >= 10
-const MAX_TOKENS_PER_SCAN = 20;    // Max tokens to process per scan
 
 async function main() {
   console.log(`
@@ -35,12 +42,24 @@ async function main() {
     process.exit(1);
   }
 
+  const { realtime, summary } = config;
+
   console.log('[Main] Configuration loaded:');
   console.log(`[Main]   RPC: ${config.bscRpcUrl}`);
-  console.log(`[Main]   Scan Interval: every ${SCAN_INTERVAL_SECONDS} second`);
-  console.log(`[Main]   Alert Threshold: score >= ${NEW_TOKEN_ALERT_THRESHOLD}`);
-  console.log(`[Main]   Watched Wallets: ${config.watchedWallets.length}`);
   console.log(`[Main]   Telegram: ${config.telegram.botToken ? 'Enabled' : 'Disabled'}`);
+  console.log('');
+  console.log('[Main] Mode Configuration:');
+  console.log(`[Main]   Real-time Mode: ${realtime.enabled ? 'ENABLED' : 'DISABLED'}`);
+  if (realtime.enabled) {
+    console.log(`[Main]     - Scan Interval: every ${realtime.scanIntervalSeconds}s`);
+    console.log(`[Main]     - Alert Threshold: score >= ${realtime.alertThreshold}`);
+    console.log(`[Main]     - Blocks Per Scan: ${realtime.blocksPerScan}`);
+    console.log(`[Main]     - Max Tokens Per Scan: ${realtime.maxTokensPerScan}`);
+  }
+  console.log(`[Main]   Summary Report: ${summary.enabled ? 'ENABLED' : 'DISABLED'}`);
+  if (summary.enabled) {
+    console.log(`[Main]     - Interval: every ${summary.intervalMinutes} minutes`);
+  }
 
   // Initialize modules
   const db = new SqliteDatabase('./data/monitor.db');
@@ -62,9 +81,11 @@ async function main() {
     scanner,
     scorer,
     alertManager,
-    lastProcessedBlock: currentBlock - 10, // Start from 10 blocks ago to catch recent
+    lastProcessedBlock: realtime.enabled ? currentBlock - 10 : currentBlock,
     knownTokens: new Set(),
     startTime: Date.now(),
+    summaryTokens: new Map(),
+    lastSummaryTime: Date.now(),
   };
 
   // Load known tokens from database
@@ -74,25 +95,34 @@ async function main() {
   }
   console.log(`[Main] Loaded ${existingTokens.length} known tokens from database`);
 
-  // Initial scan
-  console.log('[Main] Running initial scan...');
-  await runScan(state);
+  // ========== Real-time Monitoring ==========
+  if (realtime.enabled) {
+    console.log('[Main] Starting Real-time Monitoring...');
 
-  // Schedule periodic scans (every second)
-  console.log(`[Main] Scheduling periodic scans: every ${SCAN_INTERVAL_SECONDS} second(s)`);
+    // Initial scan
+    await runRealtimeScan(state);
 
-  setInterval(async () => {
-    console.log(`\n[Main] === Scheduled Scan Started at ${new Date().toLocaleString()} ===`);
-    await runScan(state);
-    console.log(`[Main] === Scheduled Scan Completed ===\n`);
-  }, SCAN_INTERVAL_SECONDS * 1000);
+    // Schedule periodic real-time scans
+    setInterval(async () => {
+      console.log(`\n[Main] === Real-time Scan at ${new Date().toLocaleString()} ===`);
+      await runRealtimeScan(state);
+    }, realtime.scanIntervalSeconds * 1000);
+  } else {
+    console.log('[Main] Real-time Monitoring DISABLED');
+  }
 
-  // Schedule daily summary at 9:00 AM
-  nodeCron.schedule('0 9 * * *', async () => {
-    console.log(`\n[Main] === Daily Summary Started at ${new Date().toLocaleString()} ===`);
-    await sendDailySummary(state);
-    console.log(`[Main] === Daily Summary Completed ===\n`);
-  });
+  // ========== Summary Report ==========
+  if (summary.enabled) {
+    console.log(`[Main] Summary Report ENABLED (every ${summary.intervalMinutes} minutes)`);
+
+    // Schedule periodic summary reports
+    setInterval(async () => {
+      console.log(`\n[Main] === Summary Report at ${new Date().toLocaleString()} ===`);
+      await sendSummaryReport(state);
+    }, summary.intervalMinutes * 60 * 1000);
+  } else {
+    console.log('[Main] Summary Report DISABLED');
+  }
 
   console.log('[Main] Service started successfully. Press Ctrl+C to stop.');
 
@@ -110,8 +140,9 @@ async function main() {
   });
 }
 
-async function runScan(state: MonitorState): Promise<void> {
+async function runRealtimeScan(state: MonitorState): Promise<void> {
   const { db, fetcher, scanner, scorer, alertManager } = state;
+  const { realtime } = config;
 
   try {
     // Get current block number
@@ -122,20 +153,20 @@ async function runScan(state: MonitorState): Promise<void> {
 
     // Only scan a limited range of blocks at a time
     const fromBlock = state.lastProcessedBlock + 1;
-    const toBlock = Math.min(currentBlock, fromBlock + BLOCKS_PER_SCAN - 1);
+    const toBlock = Math.min(currentBlock, fromBlock + realtime.blocksPerScan - 1);
 
-    console.log(`[Scan] Scanning blocks ${fromBlock} to ${toBlock}...`);
+    console.log(`[Realtime] Scanning blocks ${fromBlock} to ${toBlock}...`);
 
     // Fetch trades in this range
     const newTrades = await fetcher.fetchTradesInRange(fromBlock, toBlock);
 
     if (newTrades.length === 0) {
       state.lastProcessedBlock = toBlock;
-      console.log('[Scan] No new trades in this range');
+      console.log('[Realtime] No new trades');
       return;
     }
 
-    console.log(`[Scan] Found ${newTrades.length} new trades`);
+    console.log(`[Realtime] Found ${newTrades.length} new trades`);
 
     // Update last processed block
     state.lastProcessedBlock = toBlock;
@@ -149,10 +180,10 @@ async function runScan(state: MonitorState): Promise<void> {
       tokenTrades.get(trade.tokenAddress)!.push(trade);
     }
 
-    console.log(`[Scan] ${tokenTrades.size} tokens have new activity`);
+    console.log(`[Realtime] ${tokenTrades.size} tokens have new activity`);
 
     // Process tokens (limit per scan to avoid overload)
-    const tokenAddresses = Array.from(tokenTrades.keys()).slice(0, MAX_TOKENS_PER_SCAN);
+    const tokenAddresses = Array.from(tokenTrades.keys()).slice(0, realtime.maxTokensPerScan);
     let highScoreCount = 0;
 
     for (const tokenAddress of tokenAddresses) {
@@ -199,10 +230,23 @@ async function runScan(state: MonitorState): Promise<void> {
         // Save to database
         db.saveToken(token);
 
-        // IMMEDIATELY alert if score >= threshold
-        if (score.totalScore >= NEW_TOKEN_ALERT_THRESHOLD) {
+        // Track for summary report
+        state.summaryTokens.set(tokenAddress, {
+          token,
+          score,
+          summary: {
+            totalBuys: summaryInfo.totalBuys,
+            totalSells: summaryInfo.totalSells,
+            totalVolume: summaryInfo.totalVolume,
+            totalFees: summaryInfo.totalFees,
+            uniqueTraders: summaryInfo.uniqueTraders.size,
+          }
+        });
+
+        // IMMEDIATELY alert if score >= threshold (only in realtime mode)
+        if (score.totalScore >= realtime.alertThreshold) {
           highScoreCount++;
-          console.log(`[Scan] 🚨 HIGH SCORE ALERT: ${token.symbol} = ${score.totalScore}`);
+          console.log(`[Realtime] HIGH SCORE ALERT: ${token.symbol} = ${score.totalScore}`);
 
           if (alertManager.isEnabled()) {
             await sendTokenAlert(alertManager, {
@@ -219,16 +263,81 @@ async function runScan(state: MonitorState): Promise<void> {
           }
         }
       } catch (err) {
-        console.warn(`[Scan] Error processing token ${tokenAddress}: ${(err as Error).message}`);
+        console.warn(`[Realtime] Error processing token ${tokenAddress}: ${(err as Error).message}`);
       }
     }
 
     if (highScoreCount > 0) {
-      console.log(`[Scan] Sent ${highScoreCount} high-score alerts`);
+      console.log(`[Realtime] Sent ${highScoreCount} high-score alerts`);
     }
 
   } catch (error) {
-    console.error('[Scan] Error during scan:', error);
+    console.error('[Realtime] Error during scan:', error);
+  }
+}
+
+async function sendSummaryReport(state: MonitorState): Promise<void> {
+  const { db, alertManager } = state;
+  const { summary } = config;
+
+  try {
+    const scoredTokens = Array.from(state.summaryTokens.values());
+
+    if (scoredTokens.length === 0) {
+      console.log('[Summary] No tokens to report');
+      return;
+    }
+
+    // Sort by score
+    scoredTokens.sort((a, b) => b.score.totalScore - a.score.totalScore);
+
+    // Calculate totals
+    const totalVolume = scoredTokens.reduce((sum, t) => sum + t.summary.totalVolume, 0);
+    const totalFees = scoredTokens.reduce((sum, t) => sum + t.summary.totalFees, 0);
+    const totalBuys = scoredTokens.reduce((sum, t) => sum + t.summary.totalBuys, 0);
+    const totalSells = scoredTokens.reduce((sum, t) => sum + t.summary.totalSells, 0);
+    const avgScore = scoredTokens.reduce((sum, t) => sum + t.score.totalScore, 0) / scoredTokens.length;
+    const positiveCount = scoredTokens.filter(t => t.score.totalScore > 0).length;
+
+    const message = `
+📊 <b>Four.meme ${summary.intervalMinutes}-Minute Summary Report</b>
+
+🕐 ${new Date().toLocaleString()}
+
+📈 <b>Overview:</b>
+• Active Tokens: ${scoredTokens.length}
+• Total Trades: ${totalBuys + totalSells} (Buy ${totalBuys} / Sell ${totalSells})
+• Total Volume: ${totalVolume.toFixed(4)} BNB
+• Total Fees: ${totalFees.toFixed(6)} BNB
+
+📊 <b>Score Stats:</b>
+• Avg Score: ${avgScore.toFixed(1)}
+• Positive: ${positiveCount} (${((positiveCount / scoredTokens.length) * 100).toFixed(1)}%)
+
+🏆 <b>Top ${Math.min(10, scoredTokens.length)} Tokens:</b>
+${scoredTokens.slice(0, 10).map((t, i) => {
+  const emoji = t.score.totalScore >= 50 ? '🟢' : t.score.totalScore >= 20 ? '🟡' : '🔴';
+  return `${emoji} ${i + 1}. ${t.token.symbol} - Score: ${t.score.totalScore} | Vol: ${t.summary.totalVolume.toFixed(4)} BNB`;
+}).join('\n')}
+`;
+
+    if (alertManager.isEnabled()) {
+      await alertManager.send({
+        type: 'token_alert',
+        title: `Four.meme ${summary.intervalMinutes}min Summary`,
+        content: message,
+        timestamp: Date.now(),
+      });
+    }
+
+    // Clear summary tokens after sending
+    state.summaryTokens.clear();
+    state.lastSummaryTime = Date.now();
+
+    console.log(`[Summary] Report sent: ${scoredTokens.length} tokens`);
+
+  } catch (error) {
+    console.error('[Summary] Error sending report:', error);
   }
 }
 
@@ -281,95 +390,6 @@ ${score.details.bullish.length > 0 ? '🟢 <b>Bullish Factors:</b>\n' + score.de
     timestamp: Date.now(),
     data: { tokenAddress: token.address, score },
   });
-}
-
-async function sendPeriodicSummary(
-  alertManager: AlertManager,
-  scoredTokens: Array<{
-    token: Token;
-    score: ScoreResult;
-    summary: {
-      totalBuys: number;
-      totalSells: number;
-      totalVolume: number;
-      totalFees: number;
-      uniqueTraders: number;
-    };
-  }>
-): Promise<void> {
-  if (scoredTokens.length === 0) return;
-
-  const totalVolume = scoredTokens.reduce((sum, t) => sum + t.summary.totalVolume, 0);
-  const totalFees = scoredTokens.reduce((sum, t) => sum + t.summary.totalFees, 0);
-  const totalBuys = scoredTokens.reduce((sum, t) => sum + t.summary.totalBuys, 0);
-  const totalSells = scoredTokens.reduce((sum, t) => sum + t.summary.totalSells, 0);
-  const avgScore = scoredTokens.reduce((sum, t) => sum + t.score.totalScore, 0) / scoredTokens.length;
-  const positiveCount = scoredTokens.filter(t => t.score.totalScore > 0).length;
-
-  const message = `
-📊 <b>Four.meme Real-time Monitor Report</b>
-
-🕐 ${new Date().toLocaleString()}
-
-📈 <b>Overview:</b>
-• Active Tokens: ${scoredTokens.length}
-• Total Trades: ${totalBuys + totalSells} (Buy ${totalBuys} / Sell ${totalSells})
-• Total Volume: ${totalVolume.toFixed(4)} BNB
-• Total Fees: ${totalFees.toFixed(6)} BNB
-
-📊 <b>Score Stats:</b>
-• Avg Score: ${avgScore.toFixed(1)}
-• Positive: ${positiveCount} (${((positiveCount / scoredTokens.length) * 100).toFixed(1)}%)
-
-🏆 <b>Top ${scoredTokens.length} Tokens:</b>
-${scoredTokens.slice(0, scoredTokens.length).map((t, i) => {
-  const emoji = t.score.totalScore >= 50 ? '🟢' : t.score.totalScore >= 20 ? '🟡' : '🔴';
-  return `${emoji} ${i + 1}. ${t.token.symbol} - Score: ${t.score.totalScore} | Vol: ${t.summary.totalVolume.toFixed(4)} BNB`;
-}).join('\n')}
-`;
-
-  await alertManager.send({
-    type: 'token_alert',
-    title: `Four.meme Real-time Monitor Report`,
-    content: message,
-    timestamp: Date.now(),
-  });
-}
-
-async function sendDailySummary(state: MonitorState): Promise<void> {
-  const { db, fetcher, scanner, scorer, alertManager } = state;
-
-  try {
-    // Get stats from database
-    const stats = db.getStats();
-    const recentTokens = db.getRecentTokens(1000);
-
-    const message = `
-📊 <b>Four.meme Daily Report</b>
-
-🕐 ${new Date().toLocaleString()}
-
-📈 <b>System Status:</b>
-• Uptime: ${formatUptime(Date.now() - state.startTime)}
-• DB Tokens: ${stats.tokenCount}
-• Monitored Trades: ${stats.activityCount}
-
-📈 <b>Recent Updates:</b>
-• New Tokens: ${recentTokens.length}
-• New Trades: ${stats.activityCount}
-
-🔗 <a href="https://dexscreener.com/bsc">DexScreener</a>
-`;
-
-    await alertManager.send({
-      type: 'token_alert',
-      title: 'Four.meme Daily Report',
-      content: message,
-      timestamp: Date.now(),
-    });
-  } catch (error) {
-    console.error('[Main] Error sending daily summary:', error);
-  }
 }
 
 function formatUptime(ms: number): string {
