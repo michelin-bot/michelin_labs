@@ -585,13 +585,28 @@ export class PumpDataFetcher {
             const chunkEvents = await this.factory!.queryFilter(filter, currentFrom, currentTo);
             events.push(...chunkEvents);
           } catch (error) {
-            console.warn(`[PumpDataFetcher] Chunk ${currentFrom}-${currentTo} failed, retrying with smaller chunk...`);
-            // Retry with smaller chunk (half the size)
+            const rangeSize = currentTo - currentFrom;
+            // If range size is 0 (single block) and still fails, give up
+            if (rangeSize <= 0) {
+              console.warn(`[PumpDataFetcher] Chunk ${currentFrom}-${currentTo} failed, skipping single block...`);
+              currentFrom = currentTo + 1;
+              continue;
+            }
+            // If midPoint equals currentFrom, we can't split further
             const midPoint = Math.floor((currentFrom + currentTo) / 2);
-            const smallerChunkSize = Math.max(100, Math.floor(chunkSize / 2));
+            if (midPoint <= currentFrom) {
+              console.warn(`[PumpDataFetcher] Cannot split chunk further ${currentFrom}-${currentTo}, skipping...`);
+              currentFrom = currentTo + 1;
+              continue;
+            }
+            console.warn(`[PumpDataFetcher] Chunk ${currentFrom}-${currentTo} failed, retrying with smaller chunks...`);
+            // Retry with smaller chunks
+            const smallerChunkSize = Math.max(10, Math.floor(chunkSize / 2));
             const firstHalf = await fetchEventsInChunks(filter, currentFrom, midPoint, smallerChunkSize);
             const secondHalf = await fetchEventsInChunks(filter, midPoint + 1, currentTo, smallerChunkSize);
             events.push(...firstHalf, ...secondHalf);
+            currentFrom = currentTo + 1;
+            continue;
           }
           currentFrom = currentTo + 1;
         }
@@ -717,13 +732,28 @@ export class PumpDataFetcher {
             const chunkEvents = await this.factory!.queryFilter(filter, currentFrom, currentTo);
             events.push(...chunkEvents);
           } catch (error) {
-            console.warn(`[PumpDataFetcher] Chunk ${currentFrom}-${currentTo} failed, retrying...`);
-            // Retry with smaller chunk
+            const rangeSize = currentTo - currentFrom;
+            // If range size is 0 (single block) and still fails, give up
+            if (rangeSize <= 0) {
+              console.warn(`[PumpDataFetcher] Chunk ${currentFrom}-${currentTo} failed, skipping single block...`);
+              currentFrom = currentTo + 1;
+              continue;
+            }
+            // If midPoint equals currentFrom, we can't split further
             const midPoint = Math.floor((currentFrom + currentTo) / 2);
-            const smallerChunkSize = Math.max(100, Math.floor(chunkSize / 2));
+            if (midPoint <= currentFrom) {
+              console.warn(`[PumpDataFetcher] Cannot split chunk further ${currentFrom}-${currentTo}, skipping...`);
+              currentFrom = currentTo + 1;
+              continue;
+            }
+            console.warn(`[PumpDataFetcher] Chunk ${currentFrom}-${currentTo} failed, retrying with smaller chunks...`);
+            // Retry with smaller chunks
+            const smallerChunkSize = Math.max(10, Math.floor(chunkSize / 2));
             const firstHalf = await fetchEventsInChunks(filter, currentFrom, midPoint, smallerChunkSize);
             const secondHalf = await fetchEventsInChunks(filter, midPoint + 1, currentTo, smallerChunkSize);
             events.push(...firstHalf, ...secondHalf);
+            currentFrom = currentTo + 1;
+            continue;
           }
           currentFrom = currentTo + 1;
         }
